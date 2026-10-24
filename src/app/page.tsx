@@ -1,21 +1,55 @@
-import { Col, Container, Image, Row } from 'react-bootstrap';
 
-/** The Home page. */
-const Home = () => (
-  <main>
-    <Container id="landing-page" fluid className="py-3">
-      <Row className="align-middle text-center">
-        <Col xs={4}>
-          <Image src="next.svg" width="150px" alt="" />
-        </Col>
+import { Col, Container, Row, Table } from 'react-bootstrap';
+import { prisma } from '@/lib/prisma';
+import StuffItem from '@/components/StuffItem';
+import { loggedInProtectedPage } from '@/lib/page-protection';
+import { auth } from '@/lib/auth';
 
-        <Col xs={8} className="d-flex flex-column justify-content-center">
-          <h1>Welcome to this template</h1>
-          <p>Now get to work and modify this app!</p>
-        </Col>
-      </Row>
-    </Container>
-  </main>
-);
+const ListPage = async () => {
+  const session = await auth();
 
-export default Home;
+  loggedInProtectedPage(
+    session as {
+      user: { email: string; id: string; name: string };
+    } | null,
+  );
+
+  const owner = (session && session.user && session.user.email) || '';
+
+  const stuff = await prisma.stuff.findMany({
+    where: {
+      owner,
+    },
+  });
+
+  return (
+    <main>
+      <Container id="list" fluid className="py-3">
+        <Row>
+          <Col>
+            <h1>Stuff</h1>
+            <Table striped bordered hover>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Quantity</th>
+                  <th>Condition</th>
+                  <th>Actions</th>
+                  <th>Remove</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stuff.map((item) => (
+                  <StuffItem key={item.id} {...item} />
+                ))}
+              </tbody>
+            </Table>
+          </Col>
+        </Row>
+      </Container>
+    </main>
+  );
+};
+
+export default ListPage;
+
